@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	pluggedin "github.com/pluggedin/pluggedinkit-go"
+	pluggedin "github.com/veriteknik/pluggedinkit-go"
 )
 
 func main() {

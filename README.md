@@ -5,7 +5,7 @@ Official Go SDK for the Plugged.in Library API. Full support for document manage
 ## Installation
 
 ```bash
-go get github.com/pluggedin/pluggedinkit-go
+go get github.com/veriteknik/pluggedinkit-go
 ```
 
 ## Quick Start
@@ -18,7 +18,7 @@ import (
     "fmt"
     "log"
 
-    pluggedin "github.com/pluggedin/pluggedinkit-go"
+    pluggedin "github.com/veriteknik/pluggedinkit-go"
 )
 
 func main() {
@@ -76,7 +76,7 @@ Get your API key from your Plugged.in profile settings:
 ```go
 import (
     "os"
-    pluggedin "github.com/pluggedin/pluggedinkit-go"
+    pluggedin "github.com/veriteknik/pluggedinkit-go"
 )
 
 client := pluggedin.NewClient(os.Getenv("PLUGGEDIN_API_KEY"))
@@ -403,7 +403,7 @@ export PLUGGEDIN_BASE_URL=https://plugged.in
 ```go
 import (
     "os"
-    pluggedin "github.com/pluggedin/pluggedinkit-go"
+    pluggedin "github.com/veriteknik/pluggedinkit-go"
 )
 
 client := pluggedin.NewClientWithOptions(
@@ -442,7 +442,7 @@ MIT - see [LICENSE](LICENSE) for details.
 ## Support
 
 - **Documentation**: [https://docs.plugged.in](https://docs.plugged.in)
-- **Issues**: [GitHub Issues](https://github.com/pluggedin/pluggedinkit-go/issues)
+- **Issues**: [GitHub Issues](https://github.com/veriteknik/pluggedinkit-go/issues)
 - **Discord**: [Join our community](https://discord.gg/pluggedin)
 
 ## Changelog
