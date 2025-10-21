@@ -14,7 +14,7 @@ import (
 const (
 	DefaultBaseURL = "https://plugged.in"
 	DefaultTimeout = 60 * time.Second
-	Version        = "1.0.0"
+	Version        = "1.0.1"
 )
 
 // Client is the main Plugged.in API client
@@ -141,7 +141,58 @@ func (c *Client) put(ctx context.Context, path string, body, v interface{}) erro
 	return c.request(ctx, http.MethodPut, path, body, v)
 }
 
+// patch performs a PATCH request
+func (c *Client) patch(ctx context.Context, path string, body, v interface{}) error {
+	return c.request(ctx, http.MethodPatch, path, body, v)
+}
+
 // delete performs a DELETE request
 func (c *Client) delete(ctx context.Context, path string, v interface{}) error {
 	return c.request(ctx, http.MethodDelete, path, nil, v)
+}
+
+// download performs a GET request and returns raw binary data
+func (c *Client) download(ctx context.Context, path string) ([]byte, error) {
+	u, err := url.Parse(c.baseURL)
+	if err != nil {
+		return nil, err
+	}
+	u.Path = path
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	req.Header.Set("User-Agent", c.userAgent)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		var errResp ErrorResponse
+		if err := json.NewDecoder(resp.Body).Decode(&errResp); err != nil {
+			return nil, &APIError{
+				StatusCode: resp.StatusCode,
+				Message:    fmt.Sprintf("API error: %s", resp.Status),
+			}
+		}
+		return nil, &APIError{
+			StatusCode: resp.StatusCode,
+			Message:    errResp.Error,
+			Details:    errResp.Details,
+		}
+	}
+
+	// Read all the binary data
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return body, nil
 }

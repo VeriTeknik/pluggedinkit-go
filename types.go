@@ -4,21 +4,33 @@ import "time"
 
 // Document represents a document in the library
 type Document struct {
-	ID            string            `json:"id"`
-	Title         string            `json:"title"`
-	Content       string            `json:"content,omitempty"`
-	FileSize      int64             `json:"fileSize"`
-	FileType      string            `json:"fileType"`
-	Source        DocumentSource    `json:"source"`
-	Tags          []string          `json:"tags,omitempty"`
-	CreatedAt     time.Time         `json:"createdAt"`
-	UpdatedAt     time.Time         `json:"updatedAt"`
-	LastAccessAt  *time.Time        `json:"lastAccessAt,omitempty"`
-	ModelProvider string            `json:"modelProvider,omitempty"`
-	ModelName     string            `json:"modelName,omitempty"`
-	Version       int               `json:"version"`
-	Visibility    DocumentVisibility `json:"visibility"`
-	Category      DocumentCategory  `json:"category,omitempty"`
+	ID                string             `json:"id"`
+	Title             string             `json:"title"`
+	Description       string             `json:"description,omitempty"`
+	FileName          string             `json:"fileName"`
+	FileSize          int64              `json:"fileSize"`
+	MimeType          string             `json:"mimeType"`
+	Tags              []string           `json:"tags,omitempty"`
+	Source            DocumentSource     `json:"source"`
+	Visibility        DocumentVisibility `json:"visibility"`
+	Version           int                `json:"version"`
+	CreatedAt         time.Time          `json:"createdAt"`
+	UpdatedAt         time.Time          `json:"updatedAt"`
+	AIMetadata        map[string]any     `json:"aiMetadata,omitempty"`
+	ModelAttributions []ModelAttribution `json:"modelAttributions,omitempty"`
+	Content           string             `json:"content,omitempty"`
+	ContentEncoding   string             `json:"contentEncoding,omitempty"`
+	ContentHash       string             `json:"contentHash,omitempty"`
+	ParentDocumentID  string             `json:"parentDocumentId,omitempty"`
+}
+
+// ModelAttribution represents model contribution metadata
+type ModelAttribution struct {
+	ModelName        string         `json:"modelName"`
+	ModelProvider    string         `json:"modelProvider"`
+	ContributionType string         `json:"contributionType"`
+	Timestamp        time.Time      `json:"timestamp"`
+	Metadata         map[string]any `json:"metadata,omitempty"`
 }
 
 // DocumentSource represents the source of a document
@@ -84,49 +96,59 @@ const (
 
 // DocumentFilters represents filters for listing documents
 type DocumentFilters struct {
-	Source        DocumentSource `json:"source,omitempty"`
-	Tags          []string       `json:"tags,omitempty"`
+	Source        DocumentSource   `json:"source,omitempty"`
+	Tags          []string         `json:"tags,omitempty"`
 	Category      DocumentCategory `json:"category,omitempty"`
-	DateFrom      *time.Time     `json:"dateFrom,omitempty"`
-	DateTo        *time.Time     `json:"dateTo,omitempty"`
-	ModelProvider string         `json:"modelProvider,omitempty"`
-	ModelName     string         `json:"modelName,omitempty"`
-	SearchQuery   string         `json:"searchQuery,omitempty"`
-	Sort          SortOrder      `json:"sort,omitempty"`
-	Limit         int            `json:"limit,omitempty"`
-	Offset        int            `json:"offset,omitempty"`
+	DateFrom      *time.Time       `json:"dateFrom,omitempty"`
+	DateTo        *time.Time       `json:"dateTo,omitempty"`
+	ModelProvider string           `json:"modelProvider,omitempty"`
+	ModelName     string           `json:"modelName,omitempty"`
+	SearchQuery   string           `json:"searchQuery,omitempty"`
+	Sort          SortOrder        `json:"sort,omitempty"`
+	Limit         int              `json:"limit,omitempty"`
+	Offset        int              `json:"offset,omitempty"`
 }
 
 // ListDocumentsResponse represents the response from listing documents
 type ListDocumentsResponse struct {
 	Documents []Document `json:"documents"`
 	Total     int        `json:"total"`
-	Page      int        `json:"page"`
-	PerPage   int        `json:"perPage"`
+	Limit     int        `json:"limit"`
+	Offset    int        `json:"offset"`
 }
 
 // SearchResult represents a search result
 type SearchResult struct {
-	DocumentID     string    `json:"documentId"`
-	Title          string    `json:"title"`
-	Snippet        string    `json:"snippet"`
-	RelevanceScore float64   `json:"relevanceScore"`
-	Tags           []string  `json:"tags,omitempty"`
-	CreatedAt      time.Time `json:"createdAt"`
+	ID                string             `json:"id"`
+	Title             string             `json:"title"`
+	Description       string             `json:"description,omitempty"`
+	Snippet           string             `json:"snippet"`
+	RelevanceScore    float64            `json:"relevanceScore"`
+	Source            string             `json:"source"`
+	AIMetadata        map[string]any     `json:"aiMetadata,omitempty"`
+	Tags              []string           `json:"tags,omitempty"`
+	Visibility        string             `json:"visibility"`
+	CreatedAt         time.Time          `json:"createdAt"`
+	ModelAttributions []ModelAttribution `json:"modelAttributions,omitempty"`
 }
 
 // SearchResponse represents the response from searching documents
 type SearchResponse struct {
 	Results []SearchResult `json:"results"`
 	Total   int            `json:"total"`
-	Query   string         `json:"query"`
+	Limit   int            `json:"limit"`
+	Offset  int            `json:"offset"`
+	HasMore bool           `json:"hasMore"`
 }
 
 // CreateDocumentRequest represents a request to create a document
 type CreateDocumentRequest struct {
 	Title    string                 `json:"title"`
 	Content  string                 `json:"content"`
-	Metadata map[string]interface{} `json:"metadata"`
+	Format   string                 `json:"format,omitempty"`
+	Category string                 `json:"category,omitempty"`
+	Tags     []string               `json:"tags,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // UpdateDocumentRequest represents a request to update a document
@@ -138,31 +160,36 @@ type UpdateDocumentRequest struct {
 
 // UpdateDocumentResponse represents the response from updating a document
 type UpdateDocumentResponse struct {
-	DocumentID string    `json:"documentId"`
-	Version    int       `json:"version"`
-	UpdatedAt  time.Time `json:"updatedAt"`
+	Success     bool   `json:"success"`
+	DocumentID  string `json:"documentId"`
+	Version     int    `json:"version"`
+	FileWritten bool   `json:"fileWritten"`
+	Message     string `json:"message,omitempty"`
 }
 
 // RAGResponse represents a RAG query response
 type RAGResponse struct {
-	Answer  string        `json:"answer"`
-	Sources []RAGDocument `json:"sources,omitempty"`
+	Success     bool     `json:"success"`
+	Answer      string   `json:"answer,omitempty"`
+	Sources     []string `json:"sources,omitempty"`
+	DocumentIDs []string `json:"documentIds,omitempty"`
+	Error       string   `json:"error,omitempty"`
 }
 
-// RAGDocument represents a document in RAG response
-type RAGDocument struct {
-	ID        string      `json:"id"`
-	Name      string      `json:"name"`
-	Type      string      `json:"type"`
-	Model     *ModelInfo  `json:"model,omitempty"`
-	Relevance float64     `json:"relevance,omitempty"`
+// RAGDocumentReference represents a matched document reference
+type RAGDocumentReference struct {
+	DocumentID string `json:"documentId"`
+	Source     string `json:"source,omitempty"`
 }
 
-// ModelInfo represents AI model information
-type ModelInfo struct {
-	Name     string `json:"name"`
-	Provider string `json:"provider"`
-	Version  string `json:"version,omitempty"`
+// RAGStorageStats represents storage metrics returned by the API
+type RAGStorageStats struct {
+	DocumentsCount     int     `json:"documents_count"`
+	TotalChunks        int     `json:"total_chunks"`
+	EstimatedStorageMB float64 `json:"estimated_storage_mb"`
+	VectorsCount       int     `json:"vectors_count,omitempty"`
+	EmbeddingDimension int     `json:"embedding_dimension,omitempty"`
+	IsEstimate         bool    `json:"is_estimate,omitempty"`
 }
 
 // UploadMetadata represents metadata for file uploads

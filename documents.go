@@ -86,41 +86,56 @@ func (s *DocumentsService) Get(ctx context.Context, documentID string, includeCo
 
 // Search performs a semantic search on documents
 func (s *DocumentsService) Search(ctx context.Context, query string, filters map[string]interface{}, limit, offset int) (*SearchResponse, error) {
-	path := "/api/documents/search"
-
-	params := url.Values{}
-	params.Set("query", query)
-	if limit > 0 {
-		params.Set("limit", strconv.Itoa(limit))
-	}
-	if offset > 0 {
-		params.Set("offset", strconv.Itoa(offset))
+	body := map[string]interface{}{
+		"query":  query,
+		"limit":  limit,
+		"offset": offset,
 	}
 
-	// Add filter parameters
-	for key, value := range filters {
-		params.Set(key, fmt.Sprintf("%v", value))
+	if filters != nil && len(filters) > 0 {
+		body["filters"] = filters
 	}
-
-	path = fmt.Sprintf("%s?%s", path, params.Encode())
 
 	var response SearchResponse
-	err := s.client.get(ctx, path, &response)
+	err := s.client.post(ctx, "/api/documents/search", body, &response)
 	return &response, err
 }
 
 // Create creates a new AI-generated document
 func (s *DocumentsService) Create(ctx context.Context, req *CreateDocumentRequest) (*Document, error) {
+	type createResponse struct {
+		Success    bool   `json:"success"`
+		DocumentID string `json:"documentId"`
+		Message    string `json:"message"`
+		Error      string `json:"error"`
+	}
+
+	var result createResponse
+	if err := s.client.post(ctx, "/api/documents/ai", req, &result); err != nil {
+		return nil, err
+	}
+
+	if !result.Success {
+		if result.Error != "" {
+			return nil, fmt.Errorf("failed to create document: %s", result.Error)
+		}
+		return nil, fmt.Errorf("failed to create document")
+	}
+
 	var doc Document
-	err := s.client.post(ctx, "/api/documents", req, &doc)
-	return &doc, err
+	path := fmt.Sprintf("/api/documents/%s", result.DocumentID)
+	if err := s.client.get(ctx, path, &doc); err != nil {
+		return nil, err
+	}
+
+	return &doc, nil
 }
 
 // Update updates an existing document
 func (s *DocumentsService) Update(ctx context.Context, documentID string, req *UpdateDocumentRequest) (*UpdateDocumentResponse, error) {
 	path := fmt.Sprintf("/api/documents/%s", documentID)
 	var response UpdateDocumentResponse
-	err := s.client.put(ctx, path, req, &response)
+	err := s.client.patch(ctx, path, req, &response)
 	return &response, err
 }
 
@@ -128,4 +143,16 @@ func (s *DocumentsService) Update(ctx context.Context, documentID string, req *U
 func (s *DocumentsService) Delete(ctx context.Context, documentID string) error {
 	path := fmt.Sprintf("/api/documents/%s", documentID)
 	return s.client.delete(ctx, path, nil)
+}
+
+// Download downloads a document file
+func (s *DocumentsService) Download(ctx context.Context, documentID string, projectUUID string) ([]byte, error) {
+	path := fmt.Sprintf("/api/library/download/%s", documentID)
+
+	// Add project UUID as query parameter if provided
+	if projectUUID != "" {
+		path = fmt.Sprintf("%s?projectUuid=%s", path, projectUUID)
+	}
+
+	return s.client.download(ctx, path)
 }

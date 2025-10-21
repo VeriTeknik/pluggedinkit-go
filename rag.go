@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"strconv"
 )
 
 // RAGService handles RAG-related operations
@@ -12,71 +11,102 @@ type RAGService struct {
 	client *Client
 }
 
-// AskQuestion performs a simple RAG query
-func (s *RAGService) AskQuestion(ctx context.Context, query string) (string, error) {
-	request := map[string]string{
-		"query": query,
+// Query performs a RAG query and returns the raw response.
+func (s *RAGService) Query(ctx context.Context, query string) (*RAGResponse, error) {
+	payload := map[string]interface{}{
+		"query":           query,
+		"includeMetadata": true,
 	}
 
-	var response map[string]interface{}
-	err := s.client.post(ctx, "/api/library/rag/query", request, &response)
+	var response RAGResponse
+	if err := s.client.post(ctx, "/api/rag/query", payload, &response); err != nil {
+		return nil, err
+	}
+
+	if !response.Success {
+		if response.Error != "" {
+			return nil, fmt.Errorf("rag query failed: %s", response.Error)
+		}
+		return nil, fmt.Errorf("rag query failed")
+	}
+
+	return &response, nil
+}
+
+// AskQuestion performs a simple RAG query and returns the answer text.
+func (s *RAGService) AskQuestion(ctx context.Context, query string) (string, error) {
+	response, err := s.Query(ctx, query)
 	if err != nil {
 		return "", err
 	}
 
-	answer, ok := response["answer"].(string)
-	if !ok {
-		return "", fmt.Errorf("unexpected response format")
+	if response.Answer == "" {
+		return "", fmt.Errorf("no answer returned from knowledge base")
 	}
 
-	return answer, nil
+	return response.Answer, nil
 }
 
-// QueryWithSources performs a RAG query and returns sources
-func (s *RAGService) QueryWithSources(ctx context.Context, query, projectUUID string) (*RAGResponse, error) {
-	request := map[string]string{
-		"query": query,
-	}
-
-	if projectUUID != "" {
-		request["projectUuid"] = projectUUID
-	}
-
-	var response RAGResponse
-	err := s.client.post(ctx, "/api/library/rag/query", request, &response)
-	return &response, err
+// QueryWithSources performs a RAG query and returns the response with metadata.
+func (s *RAGService) QueryWithSources(ctx context.Context, query, _ string) (*RAGResponse, error) {
+	return s.Query(ctx, query)
 }
 
-// FindRelevantDocuments finds documents relevant to a query
-func (s *RAGService) FindRelevantDocuments(ctx context.Context, query, projectUUID string, limit int) ([]RAGDocument, error) {
-	params := url.Values{}
-	params.Set("query", query)
-	if projectUUID != "" {
-		params.Set("projectUuid", projectUUID)
-	}
-	if limit > 0 {
-		params.Set("limit", strconv.Itoa(limit))
+// FindRelevantDocuments finds documents relevant to a query.
+func (s *RAGService) FindRelevantDocuments(ctx context.Context, query, _ string, limit int) ([]RAGDocumentReference, error) {
+	response, err := s.Query(ctx, query)
+	if err != nil {
+		return nil, err
 	}
 
-	path := fmt.Sprintf("/api/library/rag/relevant?%s", params.Encode())
-
-	var response struct {
-		Documents []RAGDocument `json:"documents"`
+	references := make([]RAGDocumentReference, 0, len(response.DocumentIDs))
+	for index, documentID := range response.DocumentIDs {
+		ref := RAGDocumentReference{
+			DocumentID: documentID,
+		}
+		if index < len(response.Sources) {
+			ref.Source = response.Sources[index]
+		}
+		references = append(references, ref)
 	}
-	err := s.client.get(ctx, path, &response)
-	return response.Documents, err
+
+	if limit > 0 && len(references) > limit {
+		return references[:limit], nil
+	}
+
+	return references, nil
 }
 
-// CheckAvailability checks if RAG is available
+// CheckAvailability checks if the RAG service is reachable.
 func (s *RAGService) CheckAvailability(ctx context.Context) (map[string]interface{}, error) {
-	var response map[string]interface{}
-	err := s.client.get(ctx, "/api/library/rag/status", &response)
-	return response, err
+	_, err := s.Query(ctx, "__pluggedin_health_check__")
+	if err != nil {
+		return map[string]interface{}{
+			"available": false,
+			"message":   err.Error(),
+		}, nil
+	}
+
+	return map[string]interface{}{
+		"available": true,
+	}, nil
 }
 
-// GetStorageStats gets storage statistics for RAG
-func (s *RAGService) GetStorageStats(ctx context.Context) (map[string]interface{}, error) {
-	var response map[string]interface{}
-	err := s.client.get(ctx, "/api/library/rag/stats", &response)
-	return response, err
+// GetStorageStats gets storage statistics for RAG.
+func (s *RAGService) GetStorageStats(ctx context.Context, userID string) (*RAGStorageStats, error) {
+	if userID == "" {
+		return nil, fmt.Errorf("userID is required to fetch storage statistics")
+	}
+
+	params := url.Values{}
+	params.Set("user_id", userID)
+
+	path := fmt.Sprintf("/api/rag/storage-stats?%s", params.Encode())
+
+	var stats RAGStorageStats
+	if err := s.client.get(ctx, path, &stats); err != nil {
+		return nil, err
+	}
+
+	return &stats, nil
 }
