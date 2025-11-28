@@ -218,3 +218,93 @@ type UploadStatus struct {
 	Message  string `json:"message"`
 	Progress int    `json:"progress"`
 }
+
+// ClipboardEncoding represents clipboard content encoding
+type ClipboardEncoding string
+
+const (
+	EncodingUTF8   ClipboardEncoding = "utf-8"
+	EncodingBase64 ClipboardEncoding = "base64"
+	EncodingHex    ClipboardEncoding = "hex"
+)
+
+// ClipboardVisibility represents clipboard visibility
+type ClipboardVisibility string
+
+const (
+	ClipboardVisibilityPrivate   ClipboardVisibility = "private"
+	ClipboardVisibilityWorkspace ClipboardVisibility = "workspace"
+	ClipboardVisibilityPublic    ClipboardVisibility = "public"
+)
+
+// ClipboardEntry represents a clipboard entry
+type ClipboardEntry struct {
+	UUID           string              `json:"uuid"`
+	Name           *string             `json:"name,omitempty"`
+	Idx            *int                `json:"idx,omitempty"`
+	Value          string              `json:"value"`
+	ContentType    string              `json:"contentType"`
+	Encoding       ClipboardEncoding   `json:"encoding"`
+	SizeBytes      int                 `json:"sizeBytes"`
+	Visibility     ClipboardVisibility `json:"visibility"`
+	CreatedByTool  *string             `json:"createdByTool,omitempty"`
+	CreatedByModel *string             `json:"createdByModel,omitempty"`
+	CreatedAt      time.Time           `json:"createdAt"`
+	UpdatedAt      time.Time           `json:"updatedAt"`
+	ExpiresAt      *time.Time          `json:"expiresAt,omitempty"`
+}
+
+// ClipboardListResponse represents the response from listing clipboard entries
+type ClipboardListResponse struct {
+	Success bool             `json:"success"`
+	Entries []ClipboardEntry `json:"entries"`
+}
+
+// ClipboardSetRequest represents a request to set a named clipboard entry
+type ClipboardSetRequest struct {
+	Name           string              `json:"name"`
+	Value          string              `json:"value"`
+	ContentType    string              `json:"contentType,omitempty"`
+	Encoding       ClipboardEncoding   `json:"encoding,omitempty"`
+	Visibility     ClipboardVisibility `json:"visibility,omitempty"`
+	CreatedByTool  string              `json:"createdByTool,omitempty"`
+	CreatedByModel string              `json:"createdByModel,omitempty"`
+	TTLSeconds     int                 `json:"ttlSeconds,omitempty"`
+}
+
+// ClipboardPushRequest represents a request to push to indexed clipboard
+type ClipboardPushRequest struct {
+	Value          string              `json:"value"`
+	ContentType    string              `json:"contentType,omitempty"`
+	Encoding       ClipboardEncoding   `json:"encoding,omitempty"`
+	Visibility     ClipboardVisibility `json:"visibility,omitempty"`
+	CreatedByTool  string              `json:"createdByTool,omitempty"`
+	CreatedByModel string              `json:"createdByModel,omitempty"`
+	TTLSeconds     int                 `json:"ttlSeconds,omitempty"`
+}
+
+// ClipboardGetFilters represents filters for getting a clipboard entry
+type ClipboardGetFilters struct {
+	Name *string `json:"name,omitempty"`
+	Idx  *int    `json:"idx,omitempty"`
+}
+
+// ClipboardDeleteRequest represents a request to delete a clipboard entry
+type ClipboardDeleteRequest struct {
+	Name *string `json:"name,omitempty"`
+	Idx  *int    `json:"idx,omitempty"`
+}
+
+// ClipboardResponse represents the response from clipboard operations
+type ClipboardResponse struct {
+	Success bool            `json:"success"`
+	Entry   *ClipboardEntry `json:"entry,omitempty"`
+	Error   string          `json:"error,omitempty"`
+}
+
+// ClipboardDeleteResponse represents the response from clipboard delete operations
+type ClipboardDeleteResponse struct {
+	Success bool   `json:"success"`
+	Deleted bool   `json:"deleted,omitempty"`
+	Error   string `json:"error,omitempty"`
+}
