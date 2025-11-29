@@ -74,9 +74,6 @@ func buildClipboardBody(value string, opts clipboardBodyOptions) map[string]inte
 	return body
 }
 
-// ErrClipboardEmpty is returned when the clipboard has no entries to pop
-var ErrClipboardEmpty = errors.New("clipboard is empty")
-
 // List retrieves all clipboard entries
 func (s *ClipboardService) List(ctx context.Context) ([]ClipboardEntry, error) {
 	var response ClipboardListResponse
@@ -245,7 +242,14 @@ func (s *ClipboardService) Delete(ctx context.Context, req *ClipboardDeleteReque
 		return false, err
 	}
 
-	return response.Success && response.Deleted, nil
+	if !response.Success {
+		if response.Error != "" {
+			return false, errors.New(response.Error)
+		}
+		return false, errors.New("failed to delete clipboard entry")
+	}
+
+	return response.Deleted, nil
 }
 
 // DeleteByName deletes a clipboard entry by name (convenience method)
