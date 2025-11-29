@@ -13,6 +13,70 @@ type ClipboardService struct {
 	client *Client
 }
 
+// clipboardBodyOptions contains optional fields for building clipboard request bodies
+type clipboardBodyOptions struct {
+	Name           string
+	ContentType    string
+	Encoding       ClipboardEncoding
+	Visibility     ClipboardVisibility
+	CreatedByTool  string
+	CreatedByModel string
+	TTLSeconds     int
+}
+
+// buildClipboardBody builds a request body with proper defaults for clipboard operations
+func buildClipboardBody(value string, opts clipboardBodyOptions) map[string]interface{} {
+	body := map[string]interface{}{
+		"value": value,
+	}
+
+	if opts.Name != "" {
+		body["name"] = opts.Name
+	}
+
+	// Apply defaults for content type
+	if opts.ContentType != "" {
+		body["contentType"] = opts.ContentType
+	} else {
+		body["contentType"] = "text/plain"
+	}
+
+	// Apply defaults for encoding
+	if opts.Encoding != "" {
+		body["encoding"] = string(opts.Encoding)
+	} else {
+		body["encoding"] = string(EncodingUTF8)
+	}
+
+	// Apply defaults for visibility
+	if opts.Visibility != "" {
+		body["visibility"] = string(opts.Visibility)
+	} else {
+		body["visibility"] = string(ClipboardVisibilityPrivate)
+	}
+
+	// Optional fields
+	if opts.CreatedByTool != "" {
+		body["createdByTool"] = opts.CreatedByTool
+	}
+
+	if opts.CreatedByModel != "" {
+		body["createdByModel"] = opts.CreatedByModel
+	}
+
+	if opts.TTLSeconds > 0 {
+		body["ttlSeconds"] = opts.TTLSeconds
+	}
+
+	// Hardcode source: SDK always uses 'sdk' source
+	body["source"] = string(ClipboardSourceSDK)
+
+	return body
+}
+
+// ErrClipboardEmpty is returned when the clipboard has no entries to pop
+var ErrClipboardEmpty = errors.New("clipboard is empty")
+
 // List retrieves all clipboard entries
 func (s *ClipboardService) List(ctx context.Context) ([]ClipboardEntry, error) {
 	var response ClipboardListResponse
@@ -28,7 +92,9 @@ func (s *ClipboardService) List(ctx context.Context) ([]ClipboardEntry, error) {
 	return response.Entries, nil
 }
 
-// Get retrieves a clipboard entry by name or index
+// Get retrieves a clipboard entry by name or index.
+// Returns (nil, nil) if the entry is not found.
+// Returns (nil, error) if there was an actual error.
 func (s *ClipboardService) Get(ctx context.Context, filters *ClipboardGetFilters) (*ClipboardEntry, error) {
 	if filters == nil || (filters.Name == nil && filters.Idx == nil) {
 		return nil, errors.New("either 'name' or 'idx' must be provided")
@@ -51,7 +117,11 @@ func (s *ClipboardService) Get(ctx context.Context, filters *ClipboardGetFilters
 	}
 
 	if !response.Success {
-		return nil, nil // Entry not found
+		// Distinguish between not-found and actual error
+		if response.Error != "" {
+			return nil, errors.New(response.Error)
+		}
+		return nil, nil // Entry not found (no error message)
 	}
 
 	return response.Entry, nil
@@ -73,41 +143,15 @@ func (s *ClipboardService) Set(ctx context.Context, req *ClipboardSetRequest) (*
 		return nil, errors.New("name is required")
 	}
 
-	// Set defaults
-	body := map[string]interface{}{
-		"name":  req.Name,
-		"value": req.Value,
-	}
-
-	if req.ContentType != "" {
-		body["contentType"] = req.ContentType
-	} else {
-		body["contentType"] = "text/plain"
-	}
-
-	if req.Encoding != "" {
-		body["encoding"] = req.Encoding
-	} else {
-		body["encoding"] = "utf-8"
-	}
-
-	if req.Visibility != "" {
-		body["visibility"] = req.Visibility
-	} else {
-		body["visibility"] = "private"
-	}
-
-	if req.CreatedByTool != "" {
-		body["createdByTool"] = req.CreatedByTool
-	}
-
-	if req.CreatedByModel != "" {
-		body["createdByModel"] = req.CreatedByModel
-	}
-
-	if req.TTLSeconds > 0 {
-		body["ttlSeconds"] = req.TTLSeconds
-	}
+	body := buildClipboardBody(req.Value, clipboardBodyOptions{
+		Name:           req.Name,
+		ContentType:    req.ContentType,
+		Encoding:       req.Encoding,
+		Visibility:     req.Visibility,
+		CreatedByTool:  req.CreatedByTool,
+		CreatedByModel: req.CreatedByModel,
+		TTLSeconds:     req.TTLSeconds,
+	})
 
 	var response ClipboardResponse
 	err := s.client.post(ctx, "/api/clipboard", body, &response)
@@ -131,40 +175,14 @@ func (s *ClipboardService) Push(ctx context.Context, req *ClipboardPushRequest) 
 		return nil, errors.New("request is required")
 	}
 
-	// Set defaults
-	body := map[string]interface{}{
-		"value": req.Value,
-	}
-
-	if req.ContentType != "" {
-		body["contentType"] = req.ContentType
-	} else {
-		body["contentType"] = "text/plain"
-	}
-
-	if req.Encoding != "" {
-		body["encoding"] = req.Encoding
-	} else {
-		body["encoding"] = "utf-8"
-	}
-
-	if req.Visibility != "" {
-		body["visibility"] = req.Visibility
-	} else {
-		body["visibility"] = "private"
-	}
-
-	if req.CreatedByTool != "" {
-		body["createdByTool"] = req.CreatedByTool
-	}
-
-	if req.CreatedByModel != "" {
-		body["createdByModel"] = req.CreatedByModel
-	}
-
-	if req.TTLSeconds > 0 {
-		body["ttlSeconds"] = req.TTLSeconds
-	}
+	body := buildClipboardBody(req.Value, clipboardBodyOptions{
+		ContentType:    req.ContentType,
+		Encoding:       req.Encoding,
+		Visibility:     req.Visibility,
+		CreatedByTool:  req.CreatedByTool,
+		CreatedByModel: req.CreatedByModel,
+		TTLSeconds:     req.TTLSeconds,
+	})
 
 	var response ClipboardResponse
 	err := s.client.post(ctx, "/api/clipboard/push", body, &response)
@@ -182,7 +200,9 @@ func (s *ClipboardService) Push(ctx context.Context, req *ClipboardPushRequest) 
 	return response.Entry, nil
 }
 
-// Pop pops the last indexed entry from clipboard
+// Pop pops the last indexed entry from clipboard.
+// Returns (nil, nil) if the clipboard is empty.
+// Returns (nil, error) if there was an actual error.
 func (s *ClipboardService) Pop(ctx context.Context) (*ClipboardEntry, error) {
 	var response ClipboardResponse
 	err := s.client.post(ctx, "/api/clipboard/pop", nil, &response)
@@ -190,8 +210,16 @@ func (s *ClipboardService) Pop(ctx context.Context) (*ClipboardEntry, error) {
 		return nil, err
 	}
 
-	if !response.Success || response.Entry == nil {
-		return nil, nil // No entry to pop
+	if !response.Success {
+		// Distinguish between empty clipboard and actual error
+		if response.Error != "" {
+			return nil, errors.New(response.Error)
+		}
+		return nil, nil // Clipboard is empty (no error message)
+	}
+
+	if response.Entry == nil {
+		return nil, nil // No entry returned
 	}
 
 	return response.Entry, nil
@@ -230,7 +258,9 @@ func (s *ClipboardService) DeleteByIndex(ctx context.Context, idx int) (bool, er
 	return s.Delete(ctx, &ClipboardDeleteRequest{Idx: &idx})
 }
 
-// ClearAll clears all clipboard entries. Returns count of deleted entries.
+// ClearAll clears all clipboard entries. Returns count of successfully deleted entries.
+// Individual delete errors are ignored to ensure best-effort deletion of all entries.
+// Only returns an error if the initial List operation fails.
 func (s *ClipboardService) ClearAll(ctx context.Context) (int, error) {
 	entries, err := s.List(ctx)
 	if err != nil {
@@ -240,12 +270,14 @@ func (s *ClipboardService) ClearAll(ctx context.Context) (int, error) {
 	deleted := 0
 	for _, entry := range entries {
 		var success bool
+		var deleteErr error
 		if entry.Name != nil {
-			success, _ = s.DeleteByName(ctx, *entry.Name)
+			success, deleteErr = s.DeleteByName(ctx, *entry.Name)
 		} else if entry.Idx != nil {
-			success, _ = s.DeleteByIndex(ctx, *entry.Idx)
+			success, deleteErr = s.DeleteByIndex(ctx, *entry.Idx)
 		}
-		if success {
+		// Only count as deleted if the delete actually succeeded
+		if success && deleteErr == nil {
 			deleted++
 		}
 	}
