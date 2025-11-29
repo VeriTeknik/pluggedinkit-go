@@ -74,10 +74,25 @@ func buildClipboardBody(value string, opts clipboardBodyOptions) map[string]inte
 	return body
 }
 
-// List retrieves all clipboard entries
-func (s *ClipboardService) List(ctx context.Context) ([]ClipboardEntry, error) {
+// List retrieves clipboard entries with optional pagination.
+// limit: maximum number of entries to return (1-100, default: 50)
+// offset: number of entries to skip (default: 0)
+func (s *ClipboardService) List(ctx context.Context, limit, offset int) (*ClipboardListResponse, error) {
+	params := url.Values{}
+	if limit > 0 {
+		params.Set("limit", strconv.Itoa(limit))
+	}
+	if offset > 0 {
+		params.Set("offset", strconv.Itoa(offset))
+	}
+
+	path := "/api/clipboard"
+	if len(params) > 0 {
+		path = fmt.Sprintf("%s?%s", path, params.Encode())
+	}
+
 	var response ClipboardListResponse
-	err := s.client.get(ctx, "/api/clipboard", &response)
+	err := s.client.get(ctx, path, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +101,7 @@ func (s *ClipboardService) List(ctx context.Context) ([]ClipboardEntry, error) {
 		return nil, errors.New("failed to list clipboard entries")
 	}
 
-	return response.Entries, nil
+	return &response, nil
 }
 
 // Get retrieves a clipboard entry by name or index.
@@ -262,29 +277,34 @@ func (s *ClipboardService) DeleteByIndex(ctx context.Context, idx int) (bool, er
 	return s.Delete(ctx, &ClipboardDeleteRequest{Idx: &idx})
 }
 
-// ClearAll clears all clipboard entries. Returns count of successfully deleted entries.
-// Individual delete errors are ignored to ensure best-effort deletion of all entries.
-// Only returns an error if the initial List operation fails.
-func (s *ClipboardService) ClearAll(ctx context.Context) (int, error) {
-	entries, err := s.List(ctx)
+// ClearAll clears all clipboard entries using bulk delete API.
+// Returns a ClearAllResult with the count of deleted entries and success status.
+func (s *ClipboardService) ClearAll(ctx context.Context) (*ClearAllResult, error) {
+	body := map[string]interface{}{
+		"clearAll": true,
+	}
+
+	var response struct {
+		Success      bool   `json:"success"`
+		Deleted      bool   `json:"deleted,omitempty"`
+		DeletedCount int    `json:"deletedCount,omitempty"`
+		Error        string `json:"error,omitempty"`
+	}
+
+	err := s.client.request(ctx, "DELETE", "/api/clipboard", body, &response)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	deleted := 0
-	for _, entry := range entries {
-		var success bool
-		var deleteErr error
-		if entry.Name != nil {
-			success, deleteErr = s.DeleteByName(ctx, *entry.Name)
-		} else if entry.Idx != nil {
-			success, deleteErr = s.DeleteByIndex(ctx, *entry.Idx)
+	if !response.Success {
+		if response.Error != "" {
+			return nil, errors.New(response.Error)
 		}
-		// Only count as deleted if the delete actually succeeded
-		if success && deleteErr == nil {
-			deleted++
-		}
+		return nil, errors.New("failed to clear all clipboard entries")
 	}
 
-	return deleted, nil
+	return &ClearAllResult{
+		Deleted: response.DeletedCount,
+		Success: true,
+	}, nil
 }

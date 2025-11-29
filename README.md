@@ -409,14 +409,18 @@ if entry != nil {
 #### List and Delete
 
 ```go
-// List all entries
+// List entries with pagination (limit: 100, offset: 0)
 response, err := client.Clipboard.List(ctx, 100, 0)
 if err != nil {
     log.Fatal(err)
 }
+fmt.Printf("Total: %d, Returned: %d\n", response.Total, len(response.Entries))
+
 for _, entry := range response.Entries {
-    label := entry.Name
-    if label == nil {
+    var label string
+    if entry.Name != nil {
+        label = *entry.Name
+    } else if entry.Idx != nil {
         label = fmt.Sprintf("idx:%d", *entry.Idx)
     }
     source := pluggedin.DefaultClipboardSource
@@ -427,12 +431,21 @@ for _, entry := range response.Entries {
 }
 
 // Delete by name
-err = client.Clipboard.Delete(ctx, &pluggedin.ClipboardDeleteRequest{
-    Name: "old_entry",
+name := "old_entry"
+deleted, err := client.Clipboard.Delete(ctx, &pluggedin.ClipboardDeleteRequest{
+    Name: &name,
 })
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Deleted: %v\n", deleted)
 
-// Clear all
-err = client.Clipboard.ClearAll(ctx)
+// Clear all entries (bulk delete)
+result, err := client.Clipboard.ClearAll(ctx)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Cleared %d entries\n", result.Deleted)
 ```
 
 #### Clipboard Entry Structure

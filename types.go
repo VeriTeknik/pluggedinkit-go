@@ -272,6 +272,15 @@ type ClipboardEntry struct {
 type ClipboardListResponse struct {
 	Success bool             `json:"success"`
 	Entries []ClipboardEntry `json:"entries"`
+	Total   int              `json:"total,omitempty"`
+	Limit   int              `json:"limit,omitempty"`
+	Offset  int              `json:"offset,omitempty"`
+}
+
+// ClearAllResult provides structured feedback from clearing all clipboard entries
+type ClearAllResult struct {
+	Deleted int  `json:"deleted"` // Number of entries deleted
+	Success bool `json:"success"` // Whether the operation was successful
 }
 
 // ClipboardSetRequest represents a request to set a named clipboard entry
