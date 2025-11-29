@@ -25,6 +25,7 @@ type Client struct {
 	userAgent  string
 
 	// Services
+	Clipboard *ClipboardService
 	Documents *DocumentsService
 	RAG       *RAGService
 	Uploads   *UploadsService
@@ -55,6 +56,7 @@ func NewClientWithOptions(apiKey, baseURL string, httpClient *http.Client) *Clie
 	}
 
 	// Initialize services
+	c.Clipboard = &ClipboardService{client: c}
 	c.Documents = &DocumentsService{client: c}
 	c.RAG = &RAGService{client: c}
 	c.Uploads = &UploadsService{client: c}

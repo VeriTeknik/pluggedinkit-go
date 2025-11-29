@@ -62,6 +62,7 @@ func main() {
 - 📄 **Document Management** - Full CRUD operations for documents
 - 🔍 **Semantic Search** - AI-powered document search
 - 🤖 **RAG Integration** - Natural language queries to your knowledge base
+- 📋 **Clipboard/Memory** - Persistent key-value storage for MCP tools and AI agents
 - 📤 **File Uploads** - Upload files with progress tracking
 - 🔄 **Version Control** - Document versioning and history
 - ⚡ **Type Safety** - Full Go type definitions
@@ -341,6 +342,134 @@ for i, result := range results {
     }
 }
 ```
+
+### Clipboard Operations
+
+The clipboard provides persistent key-value storage for MCP tools and AI agents.
+
+#### Set Named Entry
+
+```go
+entry, err := client.Clipboard.Set(ctx, &pluggedin.ClipboardSetRequest{
+    Name:        "user_preferences",
+    Value:       `{"theme": "dark", "lang": "en"}`,
+    ContentType: "application/json",
+    Encoding:    "utf-8",
+    Visibility:  "private",
+    TTLSeconds:  86400, // 24 hours
+})
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Created entry: %s\n", entry.UUID)
+fmt.Printf("Source: %s\n", *entry.Source) // "sdk" - automatically set
+```
+
+#### Get Entry
+
+```go
+// By name
+entry, err := client.Clipboard.GetByName(ctx, "user_preferences")
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(entry.Value)
+
+// By index (stack access)
+latest, err := client.Clipboard.GetByIndex(ctx, 0)
+```
+
+#### Push to Stack
+
+```go
+entry, err := client.Clipboard.Push(ctx, &pluggedin.ClipboardPushRequest{
+    Value:       "Processing step 1 result",
+    ContentType: "text/plain",
+})
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Pushed to index: %d\n", *entry.Idx)
+```
+
+#### Pop from Stack
+
+```go
+entry, err := client.Clipboard.Pop(ctx)
+if err != nil {
+    log.Fatal(err)
+}
+if entry != nil {
+    fmt.Printf("Popped value: %s\n", entry.Value)
+}
+```
+
+#### List and Delete
+
+```go
+// List entries with pagination (limit: 100, offset: 0)
+response, err := client.Clipboard.List(ctx, 100, 0)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Total: %d, Returned: %d\n", response.Total, len(response.Entries))
+
+for _, entry := range response.Entries {
+    var label string
+    if entry.Name != nil {
+        label = *entry.Name
+    } else if entry.Idx != nil {
+        label = fmt.Sprintf("idx:%d", *entry.Idx)
+    }
+    source := pluggedin.DefaultClipboardSource
+    if entry.Source != nil {
+        source = *entry.Source
+    }
+    fmt.Printf("%s - source: %s\n", label, source)
+}
+
+// Delete by name
+name := "old_entry"
+deleted, err := client.Clipboard.Delete(ctx, &pluggedin.ClipboardDeleteRequest{
+    Name: &name,
+})
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Deleted: %v\n", deleted)
+
+// Clear all entries (bulk delete)
+result, err := client.Clipboard.ClearAll(ctx)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Cleared %d entries\n", result.Deleted)
+```
+
+#### Clipboard Entry Structure
+
+```go
+type ClipboardEntry struct {
+    UUID           string            `json:"uuid"`
+    Name           *string           `json:"name"`           // Semantic key
+    Idx            *int              `json:"idx"`            // Stack index
+    Value          string            `json:"value"`
+    ContentType    string            `json:"contentType"`
+    Encoding       string            `json:"encoding"`       // utf-8, base64, hex
+    SizeBytes      int               `json:"sizeBytes"`
+    Visibility     string            `json:"visibility"`     // private, workspace, public
+    CreatedByTool  *string           `json:"createdByTool"`
+    CreatedByModel *string           `json:"createdByModel"`
+    Source         *ClipboardSource  `json:"source,omitempty"` // Auto-set: ui, sdk, mcp
+    CreatedAt      time.Time         `json:"createdAt"`
+    UpdatedAt      time.Time         `json:"updatedAt"`
+    ExpiresAt      *time.Time        `json:"expiresAt"`
+}
+```
+
+> **Note**: The `Source` field is automatically set to `ClipboardSourceSDK` when using this SDK. It indicates how the entry was created (UI, SDK, or MCP proxy).
 
 ### Error Handling
 
