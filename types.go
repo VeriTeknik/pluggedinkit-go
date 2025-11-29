@@ -237,6 +237,15 @@ const (
 	ClipboardVisibilityPublic    ClipboardVisibility = "public"
 )
 
+// ClipboardSource represents the source of clipboard data
+type ClipboardSource string
+
+const (
+	ClipboardSourceUI  ClipboardSource = "ui"
+	ClipboardSourceSDK ClipboardSource = "sdk"
+	ClipboardSourceMCP ClipboardSource = "mcp"
+)
+
 // ClipboardEntry represents a clipboard entry
 type ClipboardEntry struct {
 	UUID           string              `json:"uuid"`
@@ -249,6 +258,7 @@ type ClipboardEntry struct {
 	Visibility     ClipboardVisibility `json:"visibility"`
 	CreatedByTool  *string             `json:"createdByTool,omitempty"`
 	CreatedByModel *string             `json:"createdByModel,omitempty"`
+	Source         ClipboardSource     `json:"source"`
 	CreatedAt      time.Time           `json:"createdAt"`
 	UpdatedAt      time.Time           `json:"updatedAt"`
 	ExpiresAt      *time.Time          `json:"expiresAt,omitempty"`

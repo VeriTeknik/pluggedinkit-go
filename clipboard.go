@@ -109,6 +109,9 @@ func (s *ClipboardService) Set(ctx context.Context, req *ClipboardSetRequest) (*
 		body["ttlSeconds"] = req.TTLSeconds
 	}
 
+	// Hardcode source: SDK always uses 'sdk' source
+	body["source"] = "sdk"
+
 	var response ClipboardResponse
 	err := s.client.post(ctx, "/api/clipboard", body, &response)
 	if err != nil {
@@ -165,6 +168,9 @@ func (s *ClipboardService) Push(ctx context.Context, req *ClipboardPushRequest) 
 	if req.TTLSeconds > 0 {
 		body["ttlSeconds"] = req.TTLSeconds
 	}
+
+	// Hardcode source: SDK always uses 'sdk' source
+	body["source"] = "sdk"
 
 	var response ClipboardResponse
 	err := s.client.post(ctx, "/api/clipboard/push", body, &response)
