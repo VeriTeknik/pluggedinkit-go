@@ -246,6 +246,9 @@ const (
 	ClipboardSourceMCP ClipboardSource = "mcp"
 )
 
+// DefaultClipboardSource is the default source for backward compatibility
+const DefaultClipboardSource = ClipboardSourceUI
+
 // ClipboardEntry represents a clipboard entry
 type ClipboardEntry struct {
 	UUID           string              `json:"uuid"`
@@ -258,10 +261,11 @@ type ClipboardEntry struct {
 	Visibility     ClipboardVisibility `json:"visibility"`
 	CreatedByTool  *string             `json:"createdByTool,omitempty"`
 	CreatedByModel *string             `json:"createdByModel,omitempty"`
-	Source         ClipboardSource     `json:"source"`
-	CreatedAt      time.Time           `json:"createdAt"`
-	UpdatedAt      time.Time           `json:"updatedAt"`
-	ExpiresAt      *time.Time          `json:"expiresAt,omitempty"`
+	// Source is optional for backward compatibility with older API responses
+	Source    *ClipboardSource `json:"source,omitempty"`
+	CreatedAt time.Time        `json:"createdAt"`
+	UpdatedAt time.Time        `json:"updatedAt"`
+	ExpiresAt *time.Time       `json:"expiresAt,omitempty"`
 }
 
 // ClipboardListResponse represents the response from listing clipboard entries
