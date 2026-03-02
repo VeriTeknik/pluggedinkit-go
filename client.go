@@ -30,6 +30,7 @@ type Client struct {
 	RAG       *RAGService
 	Uploads   *UploadsService
 	Agents    *AgentsService
+	Jungian   *JungianService
 }
 
 // NewClient creates a new Plugged.in API client
@@ -62,6 +63,7 @@ func NewClientWithOptions(apiKey, baseURL string, httpClient *http.Client) *Clie
 	c.RAG = &RAGService{client: c}
 	c.Uploads = &UploadsService{client: c}
 	c.Agents = &AgentsService{client: c}
+	c.Jungian = &JungianService{client: c}
 
 	return c
 }
