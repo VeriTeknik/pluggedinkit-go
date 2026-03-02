@@ -331,3 +331,58 @@ type ClipboardDeleteResponse struct {
 	Deleted bool   `json:"deleted,omitempty"`
 	Error   string `json:"error,omitempty"`
 }
+
+// --- Jungian Intelligence ---
+
+// IndividuationComponents represents the breakdown of an individuation score
+type IndividuationComponents struct {
+	MemoryDepth            int `json:"memoryDepth"`
+	LearningVelocity       int `json:"learningVelocity"`
+	CollectiveContribution int `json:"collectiveContribution"`
+	SelfAwareness          int `json:"selfAwareness"`
+}
+
+// IndividuationResponse represents the individuation score and metadata
+type IndividuationResponse struct {
+	Total      int                     `json:"total"`
+	Level      string                  `json:"level"`
+	WeeklyTrend string                 `json:"weeklyTrend"`
+	Tip        string                  `json:"tip"`
+	Components IndividuationComponents `json:"components"`
+}
+
+// ArchetypedPattern represents a memory pattern with archetype metadata
+type ArchetypedPattern struct {
+	UUID            string  `json:"uuid"`
+	Archetype       string  `json:"archetype"`
+	ArchetypeLabel  string  `json:"archetypeLabel"`
+	ArchetypeWeight float64 `json:"archetypeWeight"`
+	PatternType     string  `json:"patternType"`
+	Description     string  `json:"description"`
+	Pattern         string  `json:"pattern"`
+	Confidence      float64 `json:"confidence"`
+	Similarity      float64 `json:"similarity"`
+}
+
+// ArchetypeSearchResponse represents the response from an archetype-enhanced search
+type ArchetypeSearchResponse struct {
+	Patterns []ArchetypedPattern `json:"patterns"`
+}
+
+// SynchronicityPattern represents a detected synchronicity pattern
+type SynchronicityPattern struct {
+	UUID           string  `json:"uuid"`
+	PatternType    string  `json:"patternType"`
+	Description    string  `json:"description"`
+	Confidence     float64 `json:"confidence"`
+	UniqueProfiles int     `json:"uniqueProfiles"`
+}
+
+// DreamConsolidation represents a dream consolidation record
+type DreamConsolidation struct {
+	UUID              string  `json:"uuid"`
+	SourceCount       int     `json:"sourceCount"`
+	TokenSavings      int     `json:"tokenSavings"`
+	ClusterSimilarity float64 `json:"clusterSimilarity"`
+	CreatedAt         string  `json:"createdAt"`
+}
