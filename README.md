@@ -1,5 +1,16 @@
 # Plugged.in Go SDK
 
+> [!IMPORTANT]
+> **Project status (October 2026): open source, community-driven.**
+> plugged.in, the hosted service, is moving to a new, separately developed platform. After that move,
+> this repository will no longer run plugged.in. The code stays open source under its current license and
+> continues with open collaboration: issues, pull requests, forks and new maintainers are welcome, and
+> self-hosting remains supported. The cutover date will be announced here at least 60 days in advance.
+> [What this means](https://github.com/VeriTeknik/pluggedin-app/blob/main/PROJECT_STATUS.md)
+>
+> This client talks to the plugged.in API. After the cutover, the hosted endpoint will no longer serve it;
+> point it at your own pluggedin-app instance instead.
+
 Official Go SDK for the Plugged.in Library API. Full support for document management, RAG queries, and file uploads.
 
 ## Installation
